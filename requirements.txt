@@ -1,0 +1,7 @@
+streamlit>=1.25.0
+matplotlib>=3.5
+pandas>=1.5
+supabase>=1.0.0        # optional, only if you use Supabase
+openai>=0.27.0         # optional, only if you use GPT recommendations
+python-dotenv>=0.21.0  # recommended for local env management
+tiktoken>=0.4.0        # optional, only if you use GPT recommendations
