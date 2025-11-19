@@ -10,6 +10,9 @@ Features:
 - Lightweight multi-page navigation using sidebar
 """
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 import datetime
 import io
@@ -418,3 +421,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
