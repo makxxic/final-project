@@ -24,6 +24,17 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import pandas as pd
 
+# -------------------- ENV --------------------
+# Streamlit Cloud secrets preferred
+OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY")
+OPENAI_MODEL = st.secrets.get("OPENAI_MODEL", "gpt-4o-mini")
+SUPABASE_URL = st.secrets.get("SUPABASE_URL")
+SUPABASE_KEY = st.secrets.get("SUPABASE_KEY")
+# -------------------- OPENAI CLIENT --------------------
+OPENAI_AVAILABLE = bool(OPENAI_API_KEY)
+if OPENAI_AVAILABLE:
+    client = OpenAI(api_key=OPENAI_API_KEY)
+    
 # Optional: Supabase client
 try:
     from supabase import create_client, Client as SupabaseClient  # pip install supabase
@@ -228,8 +239,7 @@ def compute_emissions(distance: float, transport_mode: str, electricity: float, 
 def call_gpt_for_recommendations(recent_df: pd.DataFrame, openai_key: Optional[str]) -> str:
     if not OPENAI_AVAILABLE or openai_key is None:
         return "GPT recommendations unavailable — install `openai` package and set OPENAI_API_KEY."
-    openai.api_key = openai_key
-    # Build a short prompt summarizing recent days
+        # Build a short prompt summarizing recent days
     summary = ""
     if recent_df.empty:
         summary = "No previous entries available. Provide general tips for reducing daily carbon footprint in transport, electricity, and cooking."
@@ -240,21 +250,20 @@ def call_gpt_for_recommendations(recent_df: pd.DataFrame, openai_key: Optional[s
             rows.append(f"{r['date']}: total={r['total_emission']} kg (transport={r['transport_emission']}, elec={r['electricity_emission']}, lpg={r['lpg_emission']})")
         summary = "Last entries:\n" + "\n".join(rows) + "\nProvide 5 concise, actionable personalized recommendations to reduce emissions based on the above data. Focus on low-cost, high-impact actions for a user in Kenya."
 
-    # Call ChatCompletion
-    try:
-        response = openai.ChatCompletion.create(
-            model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-            messages=[
-                {"role": "system", "content": "You are a helpful sustainability assistant who gives short actionable tips."},
-                {"role": "user", "content": summary}
-            ],
-            max_tokens=350,
-            temperature=0.7
-        )
-        text = response["choices"][0]["message"]["content"].strip()
-        return text
-    except Exception as e:
-        return f"Error calling OpenAI: {e}"
+
+ # GPT Tips
+    if OPENAI_AVAILABLE:
+        if st.button("Get GPT Tips"):
+            last = df.tail(7)
+            summary = "\n".join([f"{r['date']}: {r['total_emission']:.2f} kg" for _,r in last.iterrows()])
+            prompt = f"You are a sustainability assistant. Given recent daily CO₂ totals:\n{summary}\nProvide 10 actionable tips for reducing emissions."
+            try:
+                response = client.responses.create(model=OPENAI_MODEL, input=prompt, max_output_tokens=300)
+                st.markdown(response.output_text)
+            except Exception as e:
+                st.error(f"AI Error: {e}")
+    else:
+        st.warning("OpenAI not configured.")
 
 # ---------------------------
 # PLOTTING
@@ -421,4 +430,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
